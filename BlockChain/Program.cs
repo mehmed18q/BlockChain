@@ -1,29 +1,75 @@
 ﻿using BlockChainConsole.Entities;
+using BlockChainConsole.WebSocketBlockChain;
 using Newtonsoft.Json;
 
-DateTime startTime = DateTime.Now;
-BlockChain TopCoin = new();
-TopCoin.AddBlock(new Block(DateTime.Now, null, new Data { Sender = "Hamed", Receiver = "Arash", Amount = 5 }.ToString()));
-TopCoin.AddBlock(new Block(DateTime.Now, null, new Data { Sender = "Arash", Receiver = "v", Amount = 5 }.ToString()));
-TopCoin.AddBlock(new Block(DateTime.Now, null, new Data { Sender = "Pedram", Receiver = "Iman", Amount = 15 }.ToString()));
-DateTime endTime = DateTime.Now;
+namespace BlockChainConsole
+{
+	internal class Program
+	{
+		public static int Port = 501;
+		public static P2PServer? Server = null;
+		public static P2PClient Client = new();
+		public static BlockChain TopCoin = new();
+		public static string Name = "Sadeq";
 
-//TopCoin.Chain[3].Data = "sender:Pedram,receiver:Sepehr,amount:15";
+		private static void Main(string[] args)
+		{
+			TopCoin.InitializeChain();
 
-Console.WriteLine(JsonConvert.SerializeObject(TopCoin, Formatting.Indented));
-Console.WriteLine($"Duration: {endTime - startTime}");
+			if (args.Length >= 1)
+			{
+				Port = int.Parse(args[0]);
+			}
 
-//Console.WriteLine($"Is Chain Valid: {TopCoin.IsValid()}");
-//Console.WriteLine("Update receiver to Sepehr");
-//TopCoin.Chain[1].Data = new Data { Sender = "Hamed", Receiver = "Sepehr", Amount = 5 }.ToString();
-//TopCoin.Chain[1].Hash = TopCoin.Chain[1].CalculateHash();
-//Console.WriteLine($"Is Chain Valid: {TopCoin.IsValid()}");
-//Console.WriteLine($"Update the entrie chain");
-//TopCoin.Chain[2].PreviousHash = TopCoin.Chain[1].Hash;
-//TopCoin.Chain[2].Hash = TopCoin.Chain[2].CalculateHash();
-//TopCoin.Chain[3].PreviousHash = TopCoin.Chain[2].Hash;
-//TopCoin.Chain[3].Hash = TopCoin.Chain[3].CalculateHash();
-//Console.WriteLine($"Is Chain Valid: {TopCoin.IsValid()}");
+			if (args.Length >= 2)
+			{
+				Name = args[1];
+			}
 
-Console.Read();
+			if (Port > 0)
+			{
+				Server = new P2PServer();
+				Server.Start();
+			}
 
+			bool _while = true;
+			while (_while)
+			{
+				switch (Statics.ShowMenu())
+				{
+					case 1:
+						Console.Write("Please Enter the Server URL: ");
+						string? serverURL = Console.ReadLine();
+						Client.Connect($"{serverURL}/Blockchain");
+						break;
+					case 2:
+						Console.Write("Please Enter the Receiver Name: ");
+						string? receiverName = Console.ReadLine();
+						Console.Write("Please Enter the Amount: ");
+						string? amount = Console.ReadLine();
+						if (amount is not null && !string.IsNullOrEmpty(receiverName))
+						{
+							TopCoin.CreateTransaction(new Transaction(Name, receiverName, int.Parse(amount)));
+							TopCoin.ProcessPendingTransaction(Name);
+							Client.Broadcast(JsonConvert.SerializeObject(TopCoin));
+						}
+						break;
+					case 3:
+						Console.WriteLine("Blockchain:");
+						Console.WriteLine(JsonConvert.SerializeObject(TopCoin, Formatting.Indented));
+						break;
+					case 4:
+						Console.Write("Please Enter the User Name: ");
+						Name = Console.ReadLine() ?? Name;
+						break;
+					default:
+						_while = false;
+						break;
+				}
+
+			}
+
+			Client.Close();
+		}
+	}
+}

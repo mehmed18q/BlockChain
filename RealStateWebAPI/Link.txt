@@ -1,0 +1,5 @@
+https://etherconverter.online/
+https://ethgasstation.info/
+https://etherscan.io/apis#transactions
+https://www.myetherwallet.com/access-my-wallet
+https://www.etherchain.org/api/gasPriceOracle

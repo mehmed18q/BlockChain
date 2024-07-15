@@ -3,17 +3,28 @@
 	internal record BlockChain
 	{
 		public IList<Block> Chain { get; set; } = null!;
-		public int Difficulty { get; set; } = 3;
+		public int Difficulty { get; set; } = 2;
+		public int Reward { get; set; } = 1;
 
-		public BlockChain()
+		public IList<Transaction> PendingTransactions { get; set; } = new List<Transaction>();
+
+		public void CreateTransaction(Transaction transaction)
 		{
-			InitializeChain();
-			AddGenesisBlock();
+			PendingTransactions.Add(transaction);
+		}
+
+		public void ProcessPendingTransaction(string minerAddress)
+		{
+			Block block = new(DateTime.Now, GetLatestBlock().Hash, PendingTransactions);
+			AddBlock(block);
+			PendingTransactions = new List<Transaction>();
+			CreateTransaction(new Transaction(null, minerAddress, Reward));
 		}
 
 		public void InitializeChain()
 		{
 			Chain = new List<Block>();
+			AddGenesisBlock();
 
 		}
 		public void AddGenesisBlock()
@@ -21,9 +32,12 @@
 			Chain.Add(CreateGenesisBlock());
 		}
 
-		public static Block CreateGenesisBlock()
+		public Block CreateGenesisBlock()
 		{
-			return new Block(DateTime.Now, null, "{}");
+			Block block = new(DateTime.Now, null, PendingTransactions);
+			block.Mine(Difficulty);
+			PendingTransactions = new List<Transaction>();
+			return block;
 		}
 
 		public Block GetLatestBlock()
@@ -58,6 +72,22 @@
 				}
 			}
 			return true;
+		}
+
+		public int GetBalance(string address)
+		{
+			int balance = 0;
+			foreach (Block item in Chain)
+			{
+				foreach (Transaction transaction in item.Transactions.Where(t => t.FromAddress == address || t.ToAddress == address))
+				{
+					int type = transaction.FromAddress == address ? -1 : 1;
+
+					balance += type * transaction.Amount;
+				}
+			}
+
+			return balance;
 		}
 	}
 }
